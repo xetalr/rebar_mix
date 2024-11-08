@@ -9,16 +9,21 @@
 build(AppInfo) ->
   AppDir = rebar_app_info:dir(AppInfo),
   BuildDir = filename:join(AppDir, "../"),
-  BuildElixirDir = filename:join(AppDir, "_build/prod/lib/"),
   AppName = rebar_mix_utils:to_string(rebar_app_info:name(AppInfo)),
 
   rebar_mix_utils:compile(AppDir),
 
+  MixEnvDir =
+    case filelib:is_dir(filename:join(AppDir, "_build/prod/lib/")) of
+      true -> "prod";
+      false -> "shared" %% Elixir Project option build_per_environment: false
+    end,
+  BuildElixirDir = filename:join([AppDir, "_build", MixEnvDir, "lib"]),
   {ok, Apps} = rebar_utils:list_dir(BuildElixirDir),
   Deps = Apps -- [AppName],
   rebar_mix_utils:move_to_path(Deps, BuildElixirDir, BuildDir),
 
-  AppBuild = filename:join(AppDir, "_build/prod/lib/" ++ AppName ++ "/ebin"),
+  AppBuild = filename:join([BuildElixirDir, AppName, "ebin"]),
   AppTaget = filename:join(AppDir, "ebin"),
   ec_file:copy(AppBuild, AppTaget, [recursive]),
 
